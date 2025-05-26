@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html;charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="shortcut icon" href="images/logo-192x192.png" />
+    <meta name="view-transition" content="same-origin" />
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#6200ea" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <title>App</title>
+  </head>
+  <body>
+    <a href="#main-content" class="skip-link">Skip content</a>
+    <header>
+      <div class="main-header container">
+        <a class="brand-name" href="#/">Story Map PWA</a>
+        <nav
+          id="navigation-drawer"
+          class="navigation-drawer"
+          aria-label="Buka menu navigasi"
+        >
+          <ul id="nav-list" class="nav-list">
+            <li><a href="#/home">Beranda</a></li>
+            <li><a href="#/upload">Upload</a></li>
+            <li><a href="#/about">About</a></li>
+            <li>
+              <a style="cursor: pointer" id="subscribe-button"
+                >Subscribe Notifications</a
+              >
+            </li>
+          </ul>
+        </nav>
+        <button id="drawer-button" class="drawer-button" aria-label="Menu">
+          ☰
+        </button>
+      </div>
+    </header>
+
+    <main id="main-content" tabindex="-1" class="main-content page-transition">
+      <section id="story-section" class="story-section container">
+        <div class="loading-container">
+          <div class="loading-spinner"></div>
+        </div>
+      </section>
+      <section id="offlineStories">
+        <h2>Daftar Cerita Offline</h2>
+        <div id="offlineStoryContainer"></div>
+      </section>
+    </main>
+
+    <footer>
+      <p>&copy; 2025 Story Map App | Fatih</p>
+    </footer>
+  </body>
+</html>
