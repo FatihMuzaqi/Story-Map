@@ -1,10 +1,12 @@
 import { openDB } from "idb";
 
 const DB_NAME = "story-db";
+const DB_VERSION = 1;
 const STORE_NAME = "stories";
 
+// Inisialisasi atau buka IndexedDB
 export const initDB = async () => {
-  return openDB(DB_NAME, 1, {
+  return openDB(DB_NAME, DB_VERSION, {
     upgrade(db) {
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME, { keyPath: "id" });
@@ -12,34 +14,54 @@ export const initDB = async () => {
     },
   });
 };
+
+// Simpan satu atau beberapa story ke IndexedDB
 export const saveStories = async (stories) => {
-  const db = await initDB();
-  const tx = db.transaction("stories", "readwrite");
-  const store = tx.objectStore("stories");
+  try {
+    const db = await initDB();
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
 
-  stories.forEach((story) => {
-    if (!story || typeof story !== "object") {
-      console.warn("Invalid story object:", story);
-      return;
+    // Pastikan input array
+    const storiesArray = Array.isArray(stories) ? stories : [stories];
+
+    for (const story of storiesArray) {
+      if (!story || typeof story !== "object") {
+        console.warn("Invalid story object:", story);
+        continue;
+      }
+
+      if (story.id) {
+        console.log("Saving story to IDB:", story);
+        await store.put(story);
+      } else {
+        console.warn("Story skipped (no ID):", story);
+      }
     }
 
-    if (story.id) {
-      console.log("Story being saved to IDB:", story);
-      store.put(story);
-    } else {
-      console.warn("Story skipped because it has no ID:", story);
-    }
-  });
-
-  await tx.done;
+    await tx.done;
+  } catch (error) {
+    console.error("Failed to save story:", error);
+  }
 };
 
+// Ambil semua story dari IndexedDB
 export const getStories = async () => {
-  const db = await initDB();
-  return db.getAll(STORE_NAME);
+  try {
+    const db = await initDB();
+    return await db.getAll(STORE_NAME);
+  } catch (error) {
+    console.error("Failed to get stories:", error);
+    return [];
+  }
 };
 
+// Hapus story berdasarkan ID
 export const deleteStory = async (id) => {
-  const db = await initDB();
-  return db.delete(STORE_NAME, id);
+  try {
+    const db = await initDB();
+    return await db.delete(STORE_NAME, id);
+  } catch (error) {
+    console.error("Failed to delete story:", error);
+  }
 };

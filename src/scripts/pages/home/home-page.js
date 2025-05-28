@@ -1,7 +1,11 @@
 import HomePresenter from "../../presenters/home-presenter";
-import { getStories } from "../idb";
+import { getStories, deleteStory } from "../idb";
 
 export default class HomePage {
+  constructor() {
+    this.markers = [];
+  }
+
   async render() {
     return `
       <section class="container">
@@ -22,22 +26,22 @@ export default class HomePage {
   }
 
   async afterRender() {
-    const map = L.map("map").setView([-6.2, 106.816666], 5);
+    this.map = L.map("map").setView([-6.2, 106.816666], 5);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: "© OpenStreetMap contributors",
-    }).addTo(map);
+    }).addTo(this.map);
 
     const container = document.querySelector("#story-list");
 
     try {
       await HomePresenter.loadStories({
         onSuccess: (stories) => {
-          this.renderStories(stories, container, map);
+          this.renderStories(stories, container, this.map);
         },
         onError: async (msg) => {
           const localStories = await getStories();
           if (localStories.length > 0) {
-            this.renderStories(localStories, container, map);
+            this.renderStories(localStories, container, this.map);
           } else {
             container.innerHTML = `<p class="error">Gagal memuat cerita dan tidak ada data offline: ${msg}</p>`;
           }
@@ -46,9 +50,49 @@ export default class HomePage {
     } catch (err) {
       container.innerHTML = `<p class="error">Terjadi kesalahan: ${err.message}</p>`;
     }
+
+    // 🔴 Event listener tombol hapus
+    document.querySelector("#story-list").addEventListener("click", async (event) => {
+      if (event.target.closest(".btn-delete")) {
+        const id = event.target.closest(".btn-delete").dataset.id;
+        if (confirm("Yakin ingin menghapus cerita ini?")) {
+          // 1. Hapus dari IndexedDB
+          await deleteStory(id);
+
+          // 2. Hapus dari server (jika online)
+          if (navigator.onLine) {
+            try {
+              await fetch(`https://story-api.dicoding.dev/v1/stories/${id}`, {
+                method: "DELETE",
+                headers: {
+                  "Content-Type": "application/json",
+                  // Authorization: "Bearer your_token_here" // opsional
+                },
+              });
+            } catch (err) {
+              console.warn("Gagal menghapus dari server:", err.message);
+            }
+          }
+
+          // 3. Hapus marker dari peta
+          const markerObj = this.markers.find((m) => m.id === id);
+          if (markerObj) {
+            this.map.removeLayer(markerObj.marker);
+          }
+
+          // 4. Hapus elemen dari DOM
+          const storyElement = event.target.closest(".story-item");
+          if (storyElement) {
+            storyElement.remove();
+          }
+        }
+      }
+    });
   }
 
   renderStories(stories, container, map) {
+    this.markers = []; // reset marker lama
+
     if (stories.length === 0) {
       container.innerHTML = "<p>Tidak ada cerita untuk ditampilkan.</p>";
       return;
@@ -62,16 +106,24 @@ export default class HomePage {
           <h3>${story.name}</h3>
           <p>${story.description}</p>
           <small>${new Date(story.createdAt).toLocaleString()}</small>
+
+          <div class="flex justify-end gap-2 mt-3">
+            <button class="btn-delete text-red-600 hover:underline" data-id="${story.id}" title="Hapus cerita">
+              <i class="fas fa-trash"></i> Hapus
+            </button>
+          </div>
         </article>
       `
       )
       .join("");
 
+    // Tambahkan marker ke peta
     stories.forEach((story) => {
       if (story.lat && story.lon) {
-        L.marker([story.lat, story.lon])
+        const marker = L.marker([story.lat, story.lon])
           .addTo(map)
           .bindPopup(`<strong>${story.name}</strong><br>${story.description}`);
+        this.markers.push({ id: story.id, marker });
       }
     });
   }
