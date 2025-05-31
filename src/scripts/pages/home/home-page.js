@@ -1,5 +1,5 @@
 import HomePresenter from "../../presenters/home-presenter";
-import { getStories, deleteStory } from "../idb";
+import { getStories, deleteStory, saveStories } from "../idb";
 
 export default class HomePage {
   constructor() {
@@ -51,22 +51,21 @@ export default class HomePage {
       container.innerHTML = `<p class="error">Terjadi kesalahan: ${err.message}</p>`;
     }
 
-    // 🔴 Event listener tombol hapus
+    // 🔴 Event listener tombol hapus dan simpan
     document.querySelector("#story-list").addEventListener("click", async (event) => {
+      // Hapus cerita
       if (event.target.closest(".btn-delete")) {
         const id = event.target.closest(".btn-delete").dataset.id;
         if (confirm("Yakin ingin menghapus cerita ini?")) {
-          // 1. Hapus dari IndexedDB
           await deleteStory(id);
 
-          // 2. Hapus dari server (jika online)
           if (navigator.onLine) {
             try {
               await fetch(`https://story-api.dicoding.dev/v1/stories/${id}`, {
                 method: "DELETE",
                 headers: {
                   "Content-Type": "application/json",
-                  // Authorization: "Bearer your_token_here" // opsional
+                  // Authorization: "Bearer your_token_here" // jika butuh token
                 },
               });
             } catch (err) {
@@ -74,16 +73,28 @@ export default class HomePage {
             }
           }
 
-          // 3. Hapus marker dari peta
           const markerObj = this.markers.find((m) => m.id === id);
           if (markerObj) {
             this.map.removeLayer(markerObj.marker);
           }
 
-          // 4. Hapus elemen dari DOM
           const storyElement = event.target.closest(".story-item");
           if (storyElement) {
             storyElement.remove();
+          }
+        }
+      }
+
+      // Simpan cerita ke IndexedDB (Favorit)
+      if (event.target.closest(".btn-save")) {
+        const id = event.target.closest(".btn-save").dataset.id;
+        const storyData = this.currentStories.find((story) => story.id === id);
+        if (storyData) {
+          try {
+            await saveStories(storyData);
+            alert("Cerita berhasil disimpan ke favorit (IndexedDB)");
+          } catch (err) {
+            console.error("Gagal menyimpan:", err.message);
           }
         }
       }
@@ -91,7 +102,8 @@ export default class HomePage {
   }
 
   renderStories(stories, container, map) {
-    this.markers = []; // reset marker lama
+    this.markers = [];
+    this.currentStories = stories; // simpan untuk dipakai saat klik simpan
 
     if (stories.length === 0) {
       container.innerHTML = "<p>Tidak ada cerita untuk ditampilkan.</p>";
@@ -110,6 +122,9 @@ export default class HomePage {
           <div class="flex justify-end gap-2 mt-3">
             <button class="btn-delete text-red-600 hover:underline" data-id="${story.id}" title="Hapus cerita">
               <i class="fas fa-trash"></i> Hapus
+            </button>
+            <button class="btn-save text-blue-600 hover:underline" data-id="${story.id}" title="Simpan cerita">
+              <i class="fas fa-save"></i> Simpan ke Favorit
             </button>
           </div>
         </article>
